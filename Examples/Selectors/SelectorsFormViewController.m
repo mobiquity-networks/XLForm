@@ -23,6 +23,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#import "CustomSelectorsFormViewController.h"
 #import "DynamicSelectorsFormViewController.h"
 #import "SelectorsFormViewController.h"
 
@@ -37,8 +38,72 @@ NSString *const kSelectorPickerView = @"selectorPickerView";
 NSString *const kSelectorPickerViewInline = @"selectorPickerViewInline";
 NSString *const kMultipleSelector = @"multipleSelector";
 NSString *const kDynamicSelectors = @"dynamicSelectors";
+NSString *const kCustomSelectors = @"customSelectors";
 NSString *const kPickerView = @"pickerView";
 
+
+#pragma mark - NSValueTransformer
+
+@interface NSArrayValueTrasformer : NSValueTransformer
+@end
+
+@implementation NSArrayValueTrasformer
+
++ (Class)transformedValueClass
+{
+    return [NSString class];
+}
+
++ (BOOL)allowsReverseTransformation
+{
+    return NO;
+}
+
+- (id)transformedValue:(id)value
+{
+    if (!value) return nil;
+    if ([value isKindOfClass:[NSArray class]]){
+        NSArray * array = (NSArray *)value;
+        return [NSString stringWithFormat:@"%@ Item%@", @(array.count), array.count > 1 ? @"s" : @""];
+    }
+    if ([value isKindOfClass:[NSString class]])
+    {
+        return [NSString stringWithFormat:@"%@ - ;) - Transformed", value];
+    }
+    return nil;
+}
+
+@end
+
+
+@interface ISOLanguageCodesValueTranformer : NSValueTransformer
+@end
+
+@implementation ISOLanguageCodesValueTranformer
+
++ (Class)transformedValueClass
+{
+    return [NSString class];
+}
+
++ (BOOL)allowsReverseTransformation
+{
+    return NO;
+}
+
+- (id)transformedValue:(id)value
+{
+    if (!value) return nil;
+    if ([value isKindOfClass:[NSString class]]){
+        return [[NSLocale currentLocale] displayNameForKey:NSLocaleLanguageCode value:value];
+    }
+    return nil;
+}
+
+@end
+
+
+#pragma mark - SelectorsFormViewController
 
 @implementation SelectorsFormViewController
 
@@ -176,6 +241,24 @@ NSString *const kPickerView = @"pickerView";
     row.value = @[@"Option 1", @"Option 3", @"Option 4", @"Option 5", @"Option 6"];
     [section addFormRow:row];
     
+    
+    // Multiple selector with value tranformer
+    row = [XLFormRowDescriptor formRowDescriptorWithTag:kMultipleSelector rowType:XLFormRowDescriptorTypeMultipleSelector title:@"Multiple Selector"];
+    row.selectorOptions = @[@"Option 1", @"Option 2", @"Option 3", @"Option 4", @"Option 5", @"Option 6"];
+    row.value = @[@"Option 1", @"Option 3", @"Option 4", @"Option 5", @"Option 6"];
+    row.valueTransformer = [NSArrayValueTrasformer class];
+    [section addFormRow:row];
+    
+    
+    // Language multiple selector
+    row = [XLFormRowDescriptor formRowDescriptorWithTag:kMultipleSelector rowType:XLFormRowDescriptorTypeMultipleSelector title:@"Multiple Selector"];
+    row.selectorOptions = [NSLocale ISOLanguageCodes];
+    row.selectorTitle = @"Languages";
+    row.valueTransformer = [ISOLanguageCodesValueTranformer class];
+    row.value = [NSLocale preferredLanguages];
+    [section addFormRow:row];
+    
+    
     // --------- Dynamic Selectors
     
     section = [XLFormSectionDescriptor formSectionWithTitle:@"Dynamic Selectors"];
@@ -184,14 +267,26 @@ NSString *const kPickerView = @"pickerView";
     row.buttonViewController = [DynamicSelectorsFormViewController class];
     [section addFormRow:row];
     
+    // --------- Custom Selectors
+    
+    section = [XLFormSectionDescriptor formSectionWithTitle:@"Custom Selectors"];
+    [form addFormSection:section];
+    row = [XLFormRowDescriptor formRowDescriptorWithTag:kCustomSelectors rowType:XLFormRowDescriptorTypeButton title:@"Custom Selectors"];
+    row.buttonViewController = [CustomSelectorsFormViewController class];
+    [section addFormRow:row];
+    
     section = [XLFormSectionDescriptor formSectionWithTitle:@"Disabled & Required Selectors"];
     [form addFormSection:section];
+    
+    
     
     // Disabled Selector Push
     row = [XLFormRowDescriptor formRowDescriptorWithTag:kSelectorPushDisabled rowType:XLFormRowDescriptorTypeSelectorPush title:@"Push"];
     row.value = [XLFormOptionsObject formOptionsObjectWithValue:@(1) displayText:@"Option 2"];
     row.disabled = YES;
     [section addFormRow:row];
+    
+    
 
     // --------- Disabled Selector Action Sheet
     
